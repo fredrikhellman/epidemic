@@ -11,9 +11,9 @@ def load_maps():
     pop_map = np.zeros([8192, 8192]);
     de_map = np.zeros([8192, 8192]);
     with open('GEOSTAT_grid_POP_1K_2011_V2_0_1.csv', newline='') as csvfile:
-        spamreader = csv.reader(csvfile, delimiter=',')
-        next(spamreader)
-        for row in spamreader:
+        reader = csv.reader(csvfile, delimiter=',')
+        next(reader)
+        for row in reader:
             _, N, E = re.split('N|E', row[1])
             pop_map[int(N), int(E)] = float(row[0]);
             de_map[int(N), int(E)] = row[-2]=='DE';
@@ -49,7 +49,7 @@ def compute_rij(radius):
     return csr_matrix(rij)
 
 rij0 = compute_rij(0)
-rijd = compute_rij(1)
+rijd = compute_rij(2)
 
 N = pop_map.flat[i_to_k]
 tot_pop = np.sum(N)
@@ -57,13 +57,15 @@ tot_pop = np.sum(N)
 def plot(x, y, z, xs, ys, za, tot_ts, axs):
     y_map = np.zeros_like(pop_map)
     y_map.flat[i_to_k] = y
+    x_map = np.zeros_like(pop_map)
+    x_map.flat[i_to_k] = x
     axs[0,0].clear()
     axs[0,1].clear()
     axs[1,0].clear()
     axs[1,1].clear()
     #plt.imshow(np.log(pop_map), origin='lowerleft')
-    axs[0,0].imshow(np.log10((y_map+1e-7)/(pop_map+1e-7)), cmap='hot', origin='lowerleft')
-    axs[0,1].imshow(y_map, cmap='hot', origin='lowerleft', clim=[0, 500000])
+    axs[0,0].imshow(np.log10((y_map+1e-7)/(pop_map+1e-7)), clim=[-3, 0], cmap='hot', origin='lowerleft')
+    axs[0,1].imshow(np.log10((x_map+1e-7)/(pop_map+1e-7)), clim=[-3, 0], cmap='viridis', origin='lowerleft')
     axs[1,0].plot([0*np.sum(x) for x in xs])
     axs[1,0].plot([np.sum(y) for y in ys])
     axs[1,0].plot([np.sum(z) for z in zs])
@@ -76,18 +78,18 @@ def plot(x, y, z, xs, ys, za, tot_ts, axs):
 fig, axs = plt.subplots(2,2)
 
 # Expected duration of disease in days
-lam = 20
+lam = 8
 
 # Rates
-r0_nominal = 0.1
-rd_nominal = 0.02
+r0_nominal = 0.15
+rd_nominal = 0.0005
 
 # Time step
-h = 1
+h = 0.1
 
-# Number of daily travellers. Decrease to 2% after 200 days
+# Number of daily travellers. Decrease to 10% after 100 days
 def travellers(t):
-    return 100000 if t < 200 else 2000
+    return 1000000 #if t < 100 else 100000
 
 # Where does the disease start?
 i0 = 4160
@@ -128,17 +130,17 @@ for n in range(int(np.ceil(365*5/h))):
     
     print(np.sum(xn), np.sum(yn), np.sum(zn))
 
-    if n%100 == 0:
+    if n%200 == 0:
         plot(xn, yn, zn, xs, ys, zs, tot_ts, axs)
 
     # Add seasonal variation to rates
-    seasonal_factor = (3 + np.cos(2*np.pi*t/365))/4
+    seasonal_factor = 1 #(20 + np.cos(2*np.pi*t/365))/21
     r0 = r0_nominal*seasonal_factor
     rd = rd_nominal*seasonal_factor
 
     # Germany factor
-    r0_vector = r0*(1 - 0.2*de_map.flat[i_to_k])
-    rd_vector = rd*(1 - 0.2*de_map.flat[i_to_k])
+    r0_vector = r0*(1 - 0.0*de_map.flat[i_to_k])
+    rd_vector = rd*(1 - 0.0*de_map.flat[i_to_k])
     
     # Compute reaction matrix
     R = sparse.diags(r0_vector)*rij0 + sparse.diags(rd_vector)*rijd
@@ -153,16 +155,18 @@ for n in range(int(np.ceil(365*5/h))):
     ynp1 = yn + x_to_y - y_to_z
     znp1 = zn + y_to_z
 
-    # Model far-distance travelling
+    # Model long-distance travelling
     tot_y = np.sum(ynp1)
-    t_y = (h*travellers(t)/tot_pop)*tot_y
-    tp_y, tn0_y = np.modf(t_y*Nn/tot_pop)
-    tn1_y = 1.0*(np.random.rand(np.size(tp_y)) < tp_y)
-    tnp1_y = tn0_y + tn1_y
-    tnp1 = np.sum(tnp1_y)
-    print('travelling = {}'.format(tnp1))
+    if tot_y > 1:
+        infected_travellers = (h*travellers(t)/tot_pop)*tot_y
+        infected_travellers_destination_rates = infected_travellers*Nn/tot_pop
+        tnp1_y = np.random.poisson(infected_travellers_destination_rates)
+        tnp1 = np.sum(tnp1_y)
+        print('travelling = {}'.format(tnp1))
     
-    ynp1 = ynp1 - np.sum(tnp1_y)*ynp1/tot_y
-    ynp1 = ynp1 + tnp1_y
-    
+        ynp1 = ynp1 - tnp1*ynp1/tot_y
+        ynp1 = ynp1 + tnp1_y
+    else:
+        tnp1 = 0
+        
 plt.show()
