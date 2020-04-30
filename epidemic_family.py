@@ -102,7 +102,7 @@ ax2.annotate(f'Gräns för flockimmunitet under R0',
              (r_low[-1]*lam, the_herd))
 
 ax2.set_xlabel('RE(låg)')
-ax2.set_ylabel(f'Antal personer som varit sjuka (immuna) efter {T} dagar')
+ax2.set_ylabel(f'Antal personer (befolkning = 1 milj.)')
 ax2.legend()
 
 plt.savefig('graf_family.png', )
