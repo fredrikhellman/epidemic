@@ -1,49 +1,33 @@
 import numpy as np
 
-def simulate(lam, R0, REs, t_low, t_normal, t_max, pop):
+def simulate(y_0, R0, REs, t_low, t_normal, t_max):
+    h = 0.01
+    
     REs = np.array(REs)
+    
+    r_low = REs
+    r_normal = np.full_like(REs, R0)
 
-    m = len(REs)
-
-    # Infection rates at time t (days)
-    r_low = np.array(REs)/lam
-    r_normal = m*[R0/lam]
-
-    rlist_of_t = lambda t: (r_normal if t < t_low else
-                            r_low if t < t_normal else
-                            r_normal)
-
-    # Population sizes
-    N = np.array(m*[pop])
-
-    r_of_t = lambda t: np.array(rlist_of_t(t))
-
-    # Time step
-    h = 0.1
+    r_of_t = lambda t: (r_normal if t < t_low else
+                        r_low if t < t_normal else
+                        r_normal)
 
     # x - # not yet infected people
     # y - # currently infected
     # z - # immune
 
-    x = N - 1
-    y = np.ones_like(x)
-    z = np.zeros_like(x)
-
-    xs = [x]
-    ys = [y]
-    zs = [z]
+    xs = [np.full_like(REs, 1 - y_0)]
+    ys = [np.full_like(REs, y_0)]
+    zs = [np.full_like(REs, 0)]
     ts = [0]
 
     for n in range(int(np.ceil(t_max/h))):
         t = h*n
 
-        # Compute reaction matrix
-        R = np.diag(r_of_t(t))
-
         # Compute transitions
-        hRy = h*np.dot(R, ys[-1]/N)
+        hRy = h*r_of_t(t)*ys[-1]
         x_to_y = xs[-1] - xs[-1]/(1+hRy)
-        y_to_z = h/lam*ys[-1]
+        y_to_z = h*ys[-1]
 
         # Apply transitions
         xs.append(xs[-1] - x_to_y)
