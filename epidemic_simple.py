@@ -9,26 +9,21 @@ from scipy.sparse import lil_matrix, csr_matrix
 # Expected duration of disease in days
 lam = 8
 
+m = 2
 # Infection rates at time t (days)
-r_normal = 0.3
-r0_low = 0.18
-r1_low = 0.1
+r_normal = m*[0.3]
+r_low = [0.3, 0.1]
 t_low = 40
 t_normal = 200
 
-r0_of_t = lambda t: (r_normal if t < t_low else
-                     r0_low if t < t_normal else
-                     r_normal)
-
-r1_of_t = lambda t: (r_normal if t < t_low else
-                     r1_low if t < t_normal else
-                     r_normal)
+rlist_of_t = lambda t: (r_normal if t < t_low else
+                        r0_low if t < t_normal else
+                        r_normal)
 
 # Population sizes
-N = np.array([1000000,
-              1000000])
+N = np.array(m*[1000000])
 
-r_of_t = lambda t: np.array([r0_of_t(t), r1_of_t(t)])
+r_of_t = lambda t: np.array(rlist_of_t(t))
 
 # Time step
 h = 0.1

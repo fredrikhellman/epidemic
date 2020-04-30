@@ -101,7 +101,7 @@ ax2.plot(r_low*lam, len(r_low)*[the_herd], '--', color='gray')
 ax2.annotate(f'Gräns för flockimmunitet under R0',
              (r_low[-1]*lam, the_herd))
 
-ax2.set_xlabel('Antal en smittad smittar under period "låg" (RE(låg))')
+ax2.set_xlabel('RE(låg)')
 ax2.set_ylabel(f'Antal personer som varit sjuka (immuna) efter {T} dagar')
 ax2.legend()
 
