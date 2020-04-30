@@ -25,7 +25,7 @@ def simulate(lam, R0, REs, t_low, t_normal, t_max, pop):
     # y - # currently infected
     # z - # immune
 
-    x = N
+    x = N - 1
     y = np.ones_like(x)
     z = np.zeros_like(x)
 
